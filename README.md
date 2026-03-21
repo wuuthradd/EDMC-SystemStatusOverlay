@@ -2,7 +2,7 @@
 
 A target system info overlay plugin for [Elite Dangerous Market Connector (EDMC)](https://github.com/EDCD/EDMarketConnector).
 
-When you select a target system, this plugin queries EDSM (and optionally Spansh) to show scan status directly on the game overlay via [EDMCOverlay](https://github.com/inorton/EDMCOverlay) / [EDMCModernOverlay](https://github.com/Somfic/EDMCModernOverlay).
+When you select a target system, this plugin queries EDSM (and optionally Spansh) to show scan status directly on the game overlay via [EDMCOverlay](https://github.com/inorton/EDMCOverlay) / [EDMCModernOverlay](https://github.com/SweetJonnySauce/EDMCModernOverlay).
 
 | Status | Meaning |
 |--------|---------|
@@ -40,7 +40,7 @@ Spansh: Fully Scanned 10/10 (K)
 ## Requirements
 
 - [EDMC](https://github.com/EDCD/EDMarketConnector) (v5.0+)
-- [EDMCOverlay](https://github.com/inorton/EDMCOverlay) or [EDMCModernOverlay](https://github.com/Somfic/EDMCModernOverlay)
+- [EDMCOverlay](https://github.com/inorton/EDMCOverlay) or [EDMCModernOverlay](https://github.com/SweetJonnySauce/EDMCModernOverlay)
 
 ## Installation
 
