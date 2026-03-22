@@ -14,9 +14,10 @@ _EDSM_VALUE_URL = "https://www.edsm.net/api-system-v1/estimated-value"
 _SPANSH_SYSTEM_URL = "https://spansh.co.uk/api/system"
 
 _DEFAULT_TIMEOUT = 10.0
-from version import __version__ as _version  # type: ignore[import-untyped]
+from . import __version__ as _version
 
 _USER_AGENT = f"EDMC-SystemStatusOverlay/{_version}"
+_HEADERS = {"User-Agent": _USER_AGENT}
 
 
 @dataclass
@@ -40,7 +41,7 @@ def query_edsm(system_name: str, *, timeout: float = _DEFAULT_TIMEOUT) -> System
     Returns SystemInfo with ``found=False`` on any error or when the system is
     not in the EDSM database.
     """
-    headers = {"User-Agent": _USER_AGENT}
+    headers = _HEADERS
     info = SystemInfo(found=False, name=system_name, source="edsm")
 
     # --- Bodies endpoint ---
@@ -103,7 +104,7 @@ def query_spansh(system_address: int, *, timeout: float = _DEFAULT_TIMEOUT) -> S
     Returns SystemInfo with ``found=False`` on any error or when the system is
     not in the Spansh database.
     """
-    headers = {"User-Agent": _USER_AGENT}
+    headers = _HEADERS
     info = SystemInfo(found=False, source="spansh")
 
     url = f"{_SPANSH_SYSTEM_URL}/{system_address}"

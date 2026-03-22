@@ -20,7 +20,6 @@ jobs:
         run: |
           mkdir -p dist package/EDMC-SystemStatusOverlay
           cp load.py package/EDMC-SystemStatusOverlay/
-          cp version.py package/EDMC-SystemStatusOverlay/
           cp -r scanner_plugin package/EDMC-SystemStatusOverlay/
           cd package
           zip -r ../dist/EDMC-SystemStatusOverlay-${{ github.ref_name }}.zip EDMC-SystemStatusOverlay

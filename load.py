@@ -13,13 +13,14 @@ import sys
 import threading
 import time
 import tkinter as tk
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from tkinter import ttk
 from typing import Any, Dict, Optional, Tuple
 
 # ── Plugin metadata ───────────────────────────────────────────────────
 PLUGIN_NAME = "EDMC-SystemStatusOverlay"
-PLUGIN_VERSION = "1.0.0"
+PLUGIN_VERSION = "1.0.1"
 
 # ── Logging ───────────────────────────────────────────────────────────
 logger = logging.getLogger(PLUGIN_NAME)
@@ -30,6 +31,8 @@ _config: Optional[Any] = None
 _settings: Optional[Any] = None  # scanner_plugin.settings.PluginSettings
 _lock = threading.Lock()
 _overlay_group_registered = False
+_default_settings: Optional[Any] = None
+_query_pool = ThreadPoolExecutor(max_workers=2)
 
 # ── Target tracking & rate limiting ──────────────────────────────────
 _current_target: Optional[str] = None
@@ -87,7 +90,7 @@ def _is_screen_allowed(screen: str) -> bool:
     if screen == "fss":
         return False
     if _settings is None:
-        return screen not in ("fss", "panels")
+        return screen != "panels"
     if screen == "galaxy_map":
         return _settings.show_galaxy_map
     if screen == "system_map":
@@ -126,7 +129,9 @@ def plugin_start3(plugin_dir: str) -> str:
         logger.warning("EDMC config module not available — using defaults")
         _config = None
 
-    _settings = load_settings(_config) if _config else PluginSettings()
+    global _default_settings
+    _default_settings = PluginSettings()
+    _settings = load_settings(_config) if _config else _default_settings
 
     _try_register_overlay_group()
 
@@ -141,6 +146,10 @@ def plugin_stop() -> None:
         if _pending_timer is not None:
             _pending_timer.cancel()
             _pending_timer = None
+    try:
+        _query_pool.shutdown(wait=False)
+    except Exception:
+        pass
     try:
         from scanner_plugin.overlay_display import clear_overlay
         clear_overlay()
@@ -185,7 +194,7 @@ def plugin_prefs(parent: Any, cmdr: str, is_beta: bool) -> Any:
     )
 
     # Use current settings or dataclass defaults.
-    s = _settings if _settings is not None else PluginSettings()
+    s = _settings if _settings is not None else _default_settings
 
     try:
         import myNotebook as nb  # type: ignore[import-untyped]
@@ -439,9 +448,9 @@ def _handle_fsd_target(entry: Dict[str, Any]) -> None:
     if _settings is not None and not _settings.enabled:
         return
 
-    target_name = entry.get("Name", "")
+    target_name = entry.get("Name", "").strip()
     system_address = entry.get("SystemAddress")
-    star_class = entry.get("StarClass", "")
+    star_class = entry.get("StarClass", "").strip()
 
     if not target_name:
         return
@@ -545,8 +554,7 @@ def _handle_screen_change(new_screen: str) -> None:
             name, edsm, spansh, star_class = _cached_display
             try:
                 from scanner_plugin.overlay_display import display_system_info
-                from scanner_plugin.settings import PluginSettings
-                settings = _settings if _settings is not None else PluginSettings()
+                settings = _settings if _settings is not None else _default_settings
                 display_system_info(name, edsm, spansh, settings, star_class)
                 _overlay_visible = True
             except Exception as exc:
@@ -580,27 +588,43 @@ def _query_and_display(system_name: str, system_address: Optional[int], star_cla
 
     from scanner_plugin.api_client import SystemInfo, query_edsm, query_spansh
     from scanner_plugin.overlay_display import display_system_info
-    from scanner_plugin.settings import PluginSettings
 
-    settings = _settings if _settings is not None else PluginSettings()
+    settings = _settings if _settings is not None else _default_settings
 
     _try_register_overlay_group()
 
     edsm_info: Optional[SystemInfo] = None
     spansh_info: Optional[SystemInfo] = None
 
-    try:
-        edsm_info = query_edsm(system_name)
-    except Exception as exc:
-        logger.debug("EDSM query failed: %s", exc)
-        edsm_info = SystemInfo(found=False, name=system_name, source="edsm", error=str(exc))
-
-    if settings.use_spansh and system_address is not None:
+    def _do_edsm() -> Optional[SystemInfo]:
         try:
-            spansh_info = query_spansh(system_address)
+            return query_edsm(system_name)
+        except Exception as exc:
+            logger.debug("EDSM query failed: %s", exc)
+            return SystemInfo(found=False, name=system_name, source="edsm", error=str(exc))
+
+    def _do_spansh() -> Optional[SystemInfo]:
+        try:
+            return query_spansh(system_address)
         except Exception as exc:
             logger.debug("Spansh query failed: %s", exc)
-            spansh_info = SystemInfo(found=False, source="spansh", error=str(exc))
+            return SystemInfo(found=False, source="spansh", error=str(exc))
+
+    _RESULT_TIMEOUT = 15.0
+
+    if settings.use_spansh and system_address is not None:
+        edsm_future = _query_pool.submit(_do_edsm)
+        spansh_future = _query_pool.submit(_do_spansh)
+        try:
+            edsm_info = edsm_future.result(timeout=_RESULT_TIMEOUT)
+        except Exception:
+            edsm_info = SystemInfo(found=False, name=system_name, source="edsm", error="timeout")
+        try:
+            spansh_info = spansh_future.result(timeout=_RESULT_TIMEOUT)
+        except Exception:
+            spansh_info = SystemInfo(found=False, source="spansh", error="timeout")
+    else:
+        edsm_info = _do_edsm()
 
     # Stale result guard
     with _lock:

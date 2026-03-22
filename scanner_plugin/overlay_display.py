@@ -33,6 +33,7 @@ _ALL_SUFFIXES = (
 
 # Overlay instance — lazily created.
 _overlay: Optional[object] = None
+_legacy_cleared: bool = False
 
 
 def _get_overlay() -> object:
@@ -194,9 +195,12 @@ def display_system_info(
         # Clear spansh slot when not in use
         _send(overlay, f"{_ID_PREFIX}spansh", "", "#000000", 0, 0, 0, "normal")
 
-    # Clear legacy message IDs from older versions
-    for old in ("info", "edsm-prefix", "edsm-status", "spansh-prefix", "spansh-status"):
-        _send(overlay, f"{_ID_PREFIX}{old}", "", "#000000", 0, 0, 0, "normal")
+    # Clear legacy message IDs from older versions (once per session)
+    global _legacy_cleared
+    if not _legacy_cleared:
+        for old in ("info", "edsm-prefix", "edsm-status", "spansh-prefix", "spansh-status"):
+            _send(overlay, f"{_ID_PREFIX}{old}", "", "#000000", 0, 0, 0, "normal")
+        _legacy_cleared = True
 
 
 def clear_overlay() -> None:
