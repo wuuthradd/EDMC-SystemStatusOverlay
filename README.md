@@ -40,7 +40,7 @@ Spansh: Fully Scanned 10/10 (K)
 - [EDMC](https://github.com/EDCD/EDMarketConnector)
 - [EDMCOverlay](https://github.com/inorton/EDMCOverlay) or [EDMCModernOverlay](https://github.com/SweetJonnySauce/EDMCModernOverlay)
 
-## Installation
+## Installation & Updating
 
 1. Download the latest release zip from the [Releases](../../releases) page
 2. Extract into your EDMC plugins folder:
@@ -48,6 +48,8 @@ Spansh: Fully Scanned 10/10 (K)
    - Linux: `~/.local/share/EDMarketConnector/plugins/EDMC-SystemStatusOverlay`
    - Linux (Flatpak): `~/.var/app/io.edcd.EDMarketConnector/data/EDMarketConnector/plugins/EDMC-SystemStatusOverlay`
 3. Restart EDMC
+
+- When updating, delete old version's folder and replace it with the new one instead of overwriting to avoid issues. Your settings will be preserved.
 
 ## Settings
 
